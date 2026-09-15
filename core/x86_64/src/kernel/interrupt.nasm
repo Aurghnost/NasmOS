@@ -1,11 +1,5 @@
 %include "kernel/interrupt.inc"
 
-GLOBAL isr__default ; void -> void
-GLOBAL isr__clock_int ; void -> void
-GLOBAL isr__keyboard_int ; void -> void
-GLOBAL isr__syscalls_int ; void -> void
-GLOBAL isr__pagefault_int ; void -> void
-
 [BITS 32]
 
 ; L'instruction int empile avant de manière automatique :
@@ -17,15 +11,6 @@ GLOBAL isr__pagefault_int ; void -> void
 ; et les pops lors de iret
 %macro SAVE_REGS 0
 pushad
-; idem :
-; Push EAX
-; Push ECX
-; Push EDX
-; Push EBX
-; Push ESP
-; Push EBP
-; Push ESI
-; Push EDI
 push ds
 push es
 push fs
@@ -50,32 +35,33 @@ mov al, 0x20
 out 0x20, al ; "End of Interrupt" (EOI) envoyé au PIC
 RESTORE_REGS
 iret
+.default: db "Default interruption", 10, 0
 
-tic db 0
-sec dd 0 ; pas exactement une seconde avec l'émulateur QEMU
 clock_int:
 	push ebp
 	mov ebp, esp
-		mov al, byte[tic]
+		mov al, byte[.tic]
 		inc al
 		cmp al, 25 ; va afficher "clock" toutes les 25 interruptions d'horloge
 		jnz .end
-			mov eax, [sec]
+			mov eax, [.sec]
 			inc eax
-			mov [sec], eax
+			mov [.sec], eax
 			xor al, al
 			mov eax, '.'
 			push eax
 			call screen__putc
+			pop eax
 			xor al, al
 		.end:
-		mov byte[tic], al
-
+		mov byte[.tic], al
 		call scheduler__shortschedule
-
 	mov esp, ebp
 	pop ebp
 ret
+.tic db 0 
+.sec dd 0 ; pas exactement une seconde avec l'émulateur QEMU
+
 isr__clock_int:
 SAVE_REGS
 	call clock_int
@@ -85,10 +71,6 @@ RESTORE_REGS
 iret
 
 
-lshift_enabled db 0
-rshift_enabled db 0
-alt_enabled db 0
-ctrl_enabled db 0
 keyboard_int:
 push eax
 push ebp
@@ -112,29 +94,29 @@ push ebx
 		.p29:
 		cmp al, 0x29
 		jnz .p35
-			mov [lshift_enabled], bl
+			mov [.lshift_enabled], bl
 		jmp .end
 		.p35:
 		cmp al, 0x35
 		jnz .p1C
-			mov [rshift_enabled], bl
+			mov [.rshift_enabled], bl
 		jmp .end
 		.p1C:
 		cmp al, 0x1C
 		jnz .p37
-			mov [ctrl_enabled], bl
+			mov [.ctrl_enabled], bl
 		jmp .end
 		.p37:
 		cmp al, 0x37
 		jnz .pdefault
-			mov [alt_enabled], bl
+			mov [.alt_enabled], bl
 		jmp .end
 		.pdefault:
 			mov ebx, 4
 			mul ebx
 			xor ebx, ebx
-			mov bl, byte[lshift_enabled]
-			or bl, byte[rshift_enabled]
+			mov bl, byte[.lshift_enabled]
+			or bl, byte[.rshift_enabled]
 			add eax, ebx
 			xor ebx, ebx
 			mov bl, byte[KEYBOARDMAP_QWERTY + eax]
@@ -148,22 +130,22 @@ push ebx
 		.r29:
 		cmp al, 0x29
 		jnz .r35
-			mov [lshift_enabled], bh
+			mov [.lshift_enabled], bh
 		jmp .end
 		.r35:
 		cmp al, 0x35
 		jnz .r1C
-			mov [rshift_enabled], bh
+			mov [.rshift_enabled], bh
 		jmp .end
 		.r1C:
 		cmp al, 0x1C
 		jnz .r37
-			mov [ctrl_enabled], bh
+			mov [.ctrl_enabled], bh
 		jmp .end
 		.r37:
 		cmp al, 0x37
 		jnz .end
-			mov [alt_enabled], bh
+			mov [.alt_enabled], bh
 	.end:
 
 	call screen__update_cursor
@@ -173,6 +155,10 @@ mov esp, ebp
 pop ebp
 pop eax
 ret
+.lshift_enabled db 0
+.rshift_enabled db 0
+.alt_enabled db 0
+.ctrl_enabled db 0
 
 isr__keyboard_int:
 SAVE_REGS
@@ -187,6 +173,8 @@ SAVE_REGS
 push eax
 	call syscalls__exec
 pop eax
+mov al, 0x20
+out 0x20, al ; "End of Interrupt" (EOI) envoyé au PIC
 RESTORE_REGS
 iret
 

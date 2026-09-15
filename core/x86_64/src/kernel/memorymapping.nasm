@@ -2,9 +2,6 @@
 
 [BITS 32]
 
-%if 0
-Fonction init :
-%endif
 memorymapping__init:
 push eax
 push ebp
@@ -40,7 +37,7 @@ push edx
 		mov edx, eax
 		or edx, 3 ; <- pages noyaux
 		mov dword[PT0_ADDR + 4*ecx], edx
-		add eax, 4096 ; passe à l'adresse suivante, car equivalent à incrémenter le mot de poids fort constitué des bits 12 à 31
+		add eax, PAGE_SIZE; passe à l'adresse suivante, car equivalent à incrémenter le mot de poids fort constitué des bits 12 à 31
 		inc ecx
 	jmp .for2
 	.forend2:
@@ -52,7 +49,7 @@ push edx
 		mov edx, eax
 		or edx, 3
 		mov dword[PT1_ADDR + 4*ecx], edx
-		add eax, 4096
+		add eax, PAGE_SIZE
 		inc ecx
 	jmp .for3
 	.forend3:
@@ -74,19 +71,21 @@ pop ebp
 pop eax
 ret
 
-%if 0
-Fonction create_task_test : void -> void *
-Crée un répertoire de pages pour la tâche utilisateur et renvoie l'adresse réelle de ce répertoire (pour pouvoir le charger par CR3)
-%endif
-memorymapping__create_task_test:
+;fn create_task_memory_space : void -> (void*, void*)
+;Crée un répertoire de pages pour la tâche utilisateur et renvoie l'adresse réelle de ce répertoire (pour pouvoir le charger par CR3)
+;Alloue également un espace de pile noyau
+;@return (CR3, adresse de base de pile noyau)
+memorymapping__create_task_memory_space:
 push eax
+push ebx
 push ebp
 mov ebp, esp
-	mov eax, 1 ; 8192 octets : 4096 pour la directory page et 4096 pour la première page table utilisateur
+	mov eax, 1 ; 4ko * 2^1 = 8192 octets : 4096 pour la directory page utilisateur et 4096 pour la première page table utilisateur
 	push eax
 	call memorymapping__bma_reserve_pages ; eax -> adresse physique
-	pop edi
+	add esp, 4
 	mov edx, eax
+
 	; utilise la table 255 du répertoire noyau pour save le nouveau répertoire utilisateur avant la passation
 	mov edi, PT255_ADDR
 	or edi, 3
@@ -98,46 +97,48 @@ mov ebp, esp
 	mov ebx, eax
 	or ebx, 3
 	mov [PT255_ADDR + 4], ebx
-	; maintenant, l'adresse des deux pages est accessible seulement par les adresses : 0x3FC00000 et 0x3FC01000
+	; maintenant, l'adresse des deux pages est accessible dans le reste de la fonction seulement par les adresses : USERMODE_ADDR et 0x3FC01000
 
-	mov eax, PT0_ADDR ; pour l'identity mapping sur le mapping noyau
+	; pour l'identity mapping sur les 8 Mo de mapping noyau 
+	mov eax, PT0_ADDR 
 	or eax, 3
-	mov dword[0x3FC00000], eax ; première table du répertoire utilisateur = première table noyau
+	mov dword[USERMODE_ADDR], eax ; première table du répertoire utilisateur = première table noyau
+	mov eax, PT1_ADDR
+	or eax,3
+	mov dword[USERMODE_ADDR + 4], eax ; idem pour deuxième table (référence au plus 4Mo de pages)
+	
 	mov eax, edx
-	add eax, 4096 ; eax = adresse réelle de première table utilisateur
+	add eax, PAGE_SIZE ; eax = adresse réelle de première table utilisateur, renvoyé par le bma_reserve_pages
 	or eax, 7 ; car utilisateur this time
-	mov dword[0x3FC003FC], eax ; adresse réelle de la page table utilisateur => après passation, accéder à 0x3FC00000 <=> accéder premier octet de première page utilisateur
+	mov dword[USERMODE_ADDR + 0x3FC], eax ; adresse réelle de la page table utilisateur => après passation, accéder à USERMODE_ADDR <=> accéder premier octet de première page utilisateur
 
-	; ; sauvegarde le répertoire de pages avec son adresse réelle
+	; sauvegarde le répertoire de pages avec son adresse réelle
 	; mov cr3, eax
 
 	; la suite est tâche dépendante : (à améliorer avec un gestionnaire de création de tâche)
 
-	mov eax, 1 ; 2 pages pour la tâche en elle-même
+	mov eax, 1 ; 2 pages pour la tâche et sa pile noyau
 	push eax
 	call memorymapping__bma_reserve_pages
 	pop edi
 	mov ebx, eax
 	or ebx, 7
-	mov dword[0x3FC01000], ebx
-	add eax, 4096
-	or eax, 7
-	mov dword[0x3FC01004], eax
+	mov dword[USERMODE_ADDR + PAGE_SIZE], ebx ; 0x1000 en plus car la première table utilisateur est en 0x3FC01000
+	add eax, PAGE_SIZE ; deuxième page
 
 	; save l'adresse réelle du répertoire de page en lui-même (comme dernière table) (voir push de l'appel au reserve pages du début)
-	mov dword[0x3FC00FFC], edx
+	mov dword[USERMODE_ADDR + PAGE_SIZE - 4], edx
 
-	mov [ebp + 4], edx ; renvoie dans EAX l'adresse réelle du répertoire
+	mov [ebp + 4], eax ; renvoie dans EBX l'adresse de pile noyau
+	mov [ebp + 8], edx ; renvoie dans EAX l'adresse réelle du répertoire
 mov esp, ebp
 pop ebp
+pop ebx
 pop eax
 ret
-.ok_text db "OK", 10, 0
 
-%if 0
-Fonction bma_init : void -> void
-Initialise les noeuds de l'arbre binaire d'allocation
-%endif
+;Fonction bma_init : void -> void
+;Initialise les noeuds de l'arbre binaire d'allocation
 memorymapping__bma_init:
 push eax
 push ebp
@@ -145,6 +146,7 @@ mov ebp, esp
 push ecx
 push edx
 push ebx
+
 	xor eax, eax
 	mov al, 1
 	xor ecx, ecx
@@ -163,6 +165,7 @@ push ebx
 	dec cl
 	cmp cl, 0
 	jg .for
+
 pop ebx
 pop edx
 pop ecx
@@ -171,14 +174,6 @@ pop ebp
 pop eax
 ret
 
-%if 0
-TODO : régler le bug qui empêche d'allouer 1 une seule page (n = 0)
-Fonction bma_reserve_pages : unsigned int n -> void *
-Réserve 'n' pages consécutives, de taille (n*4) Ko, où 'n' = 2^{p}, p\in{N}
-Paramètres :
- - n : ordre du nombre de pages consécutives à réserver
-Retour : adresse de la première page
-%endif
 memorymapping__bma_reserve_pages:
 push eax
 push ebp
@@ -195,7 +190,7 @@ push esi
 	push eax
 	.for:
 	pop esi ; pour dévider la mémoire et éviter fuite + récupérer parent pour le jge
-	cmp eax, 1048576
+	cmp eax, MIO
 	jge .up
 		push eax ; sauvegarde le parent
 		shl eax, 1
@@ -229,14 +224,14 @@ push esi
 	mov byte[BMA_BITMAP + eax], 0
 	push eax
 	.for2:
-	cmp eax, 1048575
+	cmp eax, (MIO - 1)
 	jge .forend2
 		shl eax, 1
 		inc eax
 	jmp .for2
 	.forend2:
 	mov edx, eax
-	sub edx, 1048575
+	sub edx, (MIO - 1)
 	shl edx, 12 ; pour passer à l'adresse réel
 	mov [ebp + 4], edx
 	pop eax ; on revient au noeud
@@ -272,12 +267,10 @@ pop ebp
 pop eax
 ret
 
-%if 0
-Fonction bma_free_page : void *addr -> int
-Libère le bloc de pages à l'adresse 'addr'
-Paramètres :
- - addr : adresse relative 
-%endif
+;Fonction bma_free_page : void *addr -> int
+;Libère le bloc de pages à l'adresse 'addr'
+;Paramètres :
+; - addr : adresse relative 
 memorymapping__bma_free_page:
 pop eax
 push ebp

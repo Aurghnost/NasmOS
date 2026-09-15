@@ -8,12 +8,6 @@ buffer: times 4096 db 0
 
 screen__endl: db 10, 0
 
-%if 0
-Fonction scroll_up : int n -> void
-Défile le contenu de l'écran vers le haut de 'n' lignes
-Parametres
-- n : le nombre de lignes à défiler
-%endif
 screen__scroll_up:
 push eax
 push ebp
@@ -57,12 +51,6 @@ pop ebp
 pop eax ; ajoute 4 à esp
 ret
 
-%if 0
-Fonction putc : char c -> void
-Affiche un unique caractère à la position du curseur sur l'écran et met à jour la position du curseur en conséquence
-Parametres
-- c : caractère ASCII
-%endif
 screen__putc:
 push eax
 push ebp
@@ -153,13 +141,6 @@ ret
 	dd .case13
 	dd .casedefault
 
-%if 0
-Fonction print_str : char *string -> void
-Affiche une chaine de caracteres sur l'ecran
-Parametres
-- *string : adresse vers la chaine à afficher
-Retour -> void
-%endif
 screen__print_str:
 push eax ; Pour laisser de la place à la valeur de retour
 push ebp
@@ -181,13 +162,6 @@ pop ebp
 pop eax
 ret
 
-%if 0
-Fonction print_uint : int n -> void
-Affiche un nombre sur l'écran
-Parametres
-- n : nombre à afficher
-Retour -> void
-%endif
 screen__print_uint:
 push eax
 push ebp
@@ -202,6 +176,7 @@ push edi
 	mov eax, '0'
 	push eax
 	call screen__putc
+	pop edx
 	jmp .end
 	.ifend:
 
@@ -226,6 +201,7 @@ push edi
 		mov al, byte[buffer + ecx]
 		push eax
 		call screen__putc
+		pop edx
 	jmp .while2
 	.whileend2:
 	.end:
@@ -237,9 +213,8 @@ pop ebp
 pop eax
 ret
 
-%if 0
-Fonction move_cursor : unsigned char x, unsigned char y -> void
-%endif
+; fn move_cursor : uint8_t x, uint8_t y -> void
+; Déplace le curseur à la position (x, y)
 move_cursor:
 push eax
 push ebp

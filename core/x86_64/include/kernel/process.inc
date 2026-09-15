@@ -1,12 +1,25 @@
-%include "kernel/gdt.inc"
+%ifndef _PROCESS_INC_INCLUDED
+%define _PROCESS_INC_INCLUDED
 
-EXTERN string__memcpy, screen__print_uint
+%define MAX_PROCESS 10
 
-EXTERN memorymapping__create_task_test
+; screen.inc
+EXTERN screen__print_str, screen__print_uint, screen__scroll_up, screen__update_cursor, screen__endl
+
+;string.inc
+EXTERN string__memcpy
+
+;memorymapping.inc
+EXTERN memorymapping__create_task_memory_space
 
 EXTERN default_tss
 
-GLOBAL process__load_task, process__list
+;fn load_task: void* prgm_physical_addr , unsigned int prgm_len -> void*
+;Alloue des pages physiques et les maps virtuellement pour le programme puis
+;copie le programme de 'prgm_len' octets situé à l'adresse "physique prgm_physical_addr"
+;dans l'espace physique alloué
+;@return CR3 de mapping virtuel
+GLOBAL process__load_task
 
 STRUC Registers
 	; même ordre que pushad
@@ -28,21 +41,34 @@ STRUC Registers
 	.fs: resw 1
 	.gs: resw 1
 	.cr3: resd 1 ; pointeur vers le répertoire de page
+
 	.sizeof:
 ENDSTRUC
 
-; sizeof(Process) = 60 octets
-STRUC Process
-	.pid: resd 1 ; l'indice dans le tableau 'tab'
+STRUC KStack
+  .ss0: resw 1
+  .esp0: resd 1
 
-	.regs: resb Registers.sizeof
+  .sizeof:
+ENDSTRUC
+
+; Processus du système
+STRUC Process
+	.pid: resd 1 ; identifiant du processus
+
+	.regs: resb Registers.sizeof ; sauvegarde des registres suite à une commutation de contexte
+
+	.kstack: resb KStack.sizeof ; caractérisation de la pile noyau
 
 	.sizeof:
 ENDSTRUC
 
 ; Pour l'instant, structurellement un tableau (et pas une liste)
+; les processus sont enregistrés dans .tab et indicés par leur PID
 STRUC ProcessList
 	.length: resw 1
-	.tab: resb 3840 ; 3840 / sizeof(Process) = 64 processus <=> Process tab[64]
+	.tab: resb (Process.sizeof * MAX_PROCESS)
 	.sizeof:
 ENDSTRUC
+
+%endif 

@@ -8,14 +8,22 @@
 %define INTGATETYPE 0x8E00 ; pour les interruptions
 %define TRAPGATETYPE 0xEF00 ; pour les appels systèmes
 
+; interrupt.inc
 EXTERN isr__default, isr__clock_int, isr__keyboard_int, isr__syscalls_int, isr__pagefault_int
+
+;string.inc
 EXTERN string__memcpy
 
-STRUC Descriptor
+;fn init : void -> void
+;Initialise la table des descripteurs d'interruptions
+GLOBAL idt__init
+
+STRUC IDTDescriptor
 	.offset0_15: resw 1
 	.select: resw 1
 	.type: resw 1
 	.offset16_31: resw 1
+	.sizeof:
 ENDSTRUC
 
 STRUC Idtptr

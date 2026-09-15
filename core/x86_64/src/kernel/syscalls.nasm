@@ -2,9 +2,7 @@
 
 [BITS 32]
 
-%if 0
-Fonction exec : *args -> int status
-%endif
+;fn exec : *args -> int status
 syscalls__exec:
 push eax
 push ebp
@@ -27,27 +25,9 @@ mov ebp, esp
 	jmp .switchend
 	.case1: ; sys_write
 		mov ebx, [ebp + 48] ; voir notes_noyau.txt : ebx avant l'appel à l'interruption
-
-		; ; Y avait besoin avant la pagination :
-		; mov eax, [ebp + 28] ; ds_select
-		; and eax, 0xF8
-		; add eax, GDTBASE
-
-		; xor edx, edx
-		; xor ecx, ecx
-		; mov dx, word[eax + Descriptor.base0_15]
-		; mov cl, byte[eax + Descriptor.base16_23]
-		; shl ecx, 16
-		; add edx, ecx
-		; xor ecx, ecx
-		; mov cl, byte[eax + Descriptor.base24_31]
-		; shl ecx, 24
-		; add edx, ecx
-
-		; add edx, ebx
-
 		push ebx
 		call screen__print_str
+		add esp, 4
 
 	.switchend:
 mov esp, ebp

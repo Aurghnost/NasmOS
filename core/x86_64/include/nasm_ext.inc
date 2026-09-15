@@ -1,0 +1,2 @@
+%macro return 1
+

@@ -2,15 +2,11 @@
 
 [BITS 32]
 
-%if 0
-Fonction memcpy : void *dest, void *src, unsigned int n -> void
-Copie 'n' octets présents à l'adresse src vers l'adresse dest
-Parametres
-- n : nombre d'octets à copier
-- dest : adresse de destination du copiage
-- src : adresse contenant les données à copier
-Retour -> void
-%endif
+;fn memcpy : void *dest, void *src, unsigned int n -> void
+;Copie 'n' octets présents à l'adresse src vers l'adresse dest
+;@param n nombre d'octets à copier
+;@param dest adresse de destination du copiage
+;@param src adresse contenant les données à copier
 string__memcpy:
 push eax
 push ebp

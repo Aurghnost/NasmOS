@@ -4,17 +4,25 @@
 %define GDTBASE 0x0 ; Adresse physique où se situe la GDT
 %define GDTSIZE 0xFF ; Nombre maximale de descripteurs dans la GDT
 
+; string.inc
 EXTERN string__memcpy
 
-STRUC Descriptor ; voir notes_bootloader
+;fn init : void -> void
+;Initialise la GDT pour le kernel
+GLOBAL gdt__init 
+
+; Descripteur de segment
+STRUC GDTDescriptor
 	.limite0_15: resw 1
 	.base0_15: resw 1
 	.base16_23: resb 1
 	.acces: resb 1
 	.limite16_19: resb 1
 	.base24_31: resb 1
+	.sizeof:
 ENDSTRUC
 
+; Pointeur vers une table de descripteurs
 STRUC Gdtptr
 	.limite :resw 1
 	.base: resd 1

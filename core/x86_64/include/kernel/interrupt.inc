@@ -1,6 +1,32 @@
+; scheduler.inc
 EXTERN scheduler__shortschedule
+
+; screen.inc
 EXTERN screen__print_str, screen__putc, screen__update_cursor, screen__print_uint
+
+; syscalls.inc
 EXTERN syscalls__exec
+
+;fn default : void -> void
+;Fonction de réalisation d'interruption par défaut : ne fait rien
+GLOBAL isr__default
+
+;fn clock_int : void -> void
+;Réalise l'interruption d'horloge : affiche un '.' tous les 25 ticks
+GLOBAL isr__clock_int 
+
+;fn keyboard_int : void -> void
+;Réalise l'affichage sur l'écran des caractères pressées détectés lors d'interruptions d'entrées clavier
+GLOBAL isr__keyboard_int
+
+;fn syscalls_int : int code -> void
+;Réalise l'appel système correspondant au code d'apppel
+;@param code Passé en argument via EAX
+GLOBAL isr__syscalls_int
+
+;fn pagefault_int : void -> void
+;Réalise l'affichage d'une erreur et l'arrêt du système en cas d'accès à une page non mappée en mémoire
+GLOBAL isr__pagefault_int
 
 ; Chaque ligne de la keyboardmap correspond à une touche (celles du bas n'ont pas de caractères associées, le pavé numérique notamment)
 KEYBOARDMAP_QWERTY: db 0x1B, 0x1B, 0x1B, 0x1B,	;	esc (0x01)
@@ -100,3 +126,4 @@ KEYBOARDMAP_QWERTY: db 0x1B, 0x1B, 0x1B, 0x1B,	;	esc (0x01)
 	db 0xFF, 0xFF, 0xFF, 0xFF,	;	0x5f
 	db 0xFF, 0xFF, 0xFF, 0xFF,	;	0x60
 	db 0xFF, 0xFF, 0xFF, 0xFF 	;	0x61
+

@@ -3,6 +3,7 @@
 
 ASM = nasm
 LINKER = ld
+EMULATOR = qemu-system-i386
 
 ISONAME = nasmos
 
@@ -10,21 +11,23 @@ SRC_DIR = core/x86_64/src
 INCLUDE_DIR = core/x86_64/include
 
 CONFIG_DIR = config/x86_64
+
 OBJ_DIR = build/obj
 BIN_DIR = build/bin
-ISOFILES = build/isofiles
 
+ISOFILES = build/isofiles
 ISOMAKER = grub-mkrescue
 
-EXT_TO_COMPILE = asm
-
+EXT_TO_COMPILE = nasm
 EXT_OTHERS = inc ld cfg
 
 SRC = $(foreach e,$(EXT_TO_COMPILE),$(shell find . -name "*.$(e)"))
 SRC := $(SRC:./%=%)
-OBJ = $(SRC:$(SRC_DIR)/%.asm=$(OBJ_DIR)/%.o)
+OBJ = $(foreach e,$(EXT_TO_COMPILE),$(SRC:$(SRC_DIR)/%.$(e)=$(OBJ_DIR)/%.o))
 
 ASMFLAGS = -f elf32
+LINKERFLAGS = --nmagic -m elf_i386
+QEMU_DEBUG_FLAGS = -s -S
 
 iso_x86_64: $(BIN_DIR)/$(ISONAME).iso
 
@@ -34,9 +37,9 @@ $(BIN_DIR)/$(ISONAME).iso: $(ISOFILES)/boot/kernel.bin | $(BIN_DIR)
 	$(ISOMAKER) -o $@ $(ISOFILES)
 
 $(ISOFILES)/boot/kernel.bin: $(OBJ)
-	ld -n -o $@ -T $(CONFIG_DIR)/iso/linker.ld --start-group $^ --end-group -m elf_i386
+	ld -o $@ -T $(CONFIG_DIR)/iso/linker.ld --start-group $^ --end-group $(LINKERFLAGS)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.nasm | $(OBJ_DIR)
 	@mkdir -p $(dir $@)
 	$(ASM) $< -o $@ $(ASMFLAGS) -I$(INCLUDE_DIR)
 
@@ -44,9 +47,14 @@ $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
 run: $(BIN_DIR)/$(ISONAME).iso
-	qemu-system-x86_64 -cdrom $(BIN_DIR)/$(ISONAME).iso
+	$(EMULATOR) -cdrom $(BIN_DIR)/$(ISONAME).iso
 
 .phony: run
+
+debug: $(BIN_DIR)/$(ISONAME).iso
+	$(EMULATOR) -cdrom $(BIN_DIR)/$(ISONAME).iso $(QEMU_DEBUG_FLAGS)
+
+.phony: debug
 
 clean:
 	rm -rf $(OBJ_DIR)
