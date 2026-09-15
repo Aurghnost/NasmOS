@@ -17,7 +17,6 @@ mov ebp, esp
 		cmp eax, 0
 		jz .else
 		; if process__list.length != 0
-
 			mov eax, process__list
 			add eax, ProcessList.tab ; le premier processus
 			mov [current_active_process], eax ; current_active_process contient l'adresse du premier processus

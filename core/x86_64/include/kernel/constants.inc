@@ -17,3 +17,5 @@
 %define PT255_ADDR 0x2FF000 ; adresse de la 255e Page Table
 
 %define USERMODE_ADDR 0x3FC00000 ; adresse de l'adresse virtuelle par défaut de l'espace d'adressage utilisateur
+
+%endif

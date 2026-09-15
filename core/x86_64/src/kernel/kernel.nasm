@@ -6,8 +6,6 @@
 GLOBAL _kmain
 
 _kmain: ; _kmain = 0x103bd0
-	; Affichage d'un message par écriture dans la RAM vidéo
-
 	push dword 25
 	call screen__scroll_up
 	add esp, 4

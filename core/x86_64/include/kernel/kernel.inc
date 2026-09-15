@@ -1,3 +1,6 @@
+%ifndef _KERNEL_INC_INCLUDED
+%define _KERNEL_INC_INCLUDED
+
 ; string.inc
 EXTERN string__memcpy
 
@@ -20,3 +23,13 @@ EXTERN memorymapping__init, memorymapping__bma_init, memorymapping__bma_reserve_
 EXTERN process__load_task, process__list
 
 EXTERN scheduler__detector_debug
+
+STRUC MbPartialInfo
+	.flags: resb 8
+	.low_mem: resb 8
+	.high_mem: resb 8
+	.boot_device: resb 8
+	.cmd_line: resb 8
+ENDSTRUC
+
+%endif
